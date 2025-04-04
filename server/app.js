@@ -13,9 +13,9 @@ const app = express();
 
 // CORS configuration
 app.use(cors({
-  origin: 'http://localhost:5173', // Fix the typo in 'origin'
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://your-frontend-domain.vercel.app']
+    : ['http://localhost:5173'],
   credentials: true
 }));
 
@@ -27,14 +27,18 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/auth', authRoutes);
 app.use('/api/qrcodes', qrCodeRoutes);
 
+// Health check route
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 // Basic test route
 app.get('/', (req, res) => {
   res.json({ message: 'QR Code API is running' });
 });
 
-// MongoDB Connection with error handling
-mongoose
-  .connect(process.env.MONGO_URI)
+// MongoDB Connection
+mongoose.connect(process.env.MONGODB_URI)
   .then(() => {
     console.log('Connected to MongoDB successfully');
     
@@ -60,3 +64,5 @@ process.on('unhandledRejection', (error) => {
   console.error('Unhandled Rejection:', error);
   process.exit(1);
 });
+
+export default app;

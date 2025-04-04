@@ -1,85 +1,64 @@
 import { useEffect, useState } from 'react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { Html5Qrcode } from 'html5-qrcode';
 
 const QRScanner = ({ onResult }) => {
-  const [scannerInitialized, setScannerInitialized] = useState(false);
   const [error, setError] = useState(null);
+  const [scanning, setScanning] = useState(false);
 
   useEffect(() => {
-    // Clean up any existing scanner instance
-    const cleanupScanner = () => {
-      const existingElement = document.getElementById('qr-reader');
-      if (existingElement) {
-        existingElement.innerHTML = '';
+    const html5QrCode = new Html5Qrcode("qr-reader");
+    
+    const startScanner = async () => {
+      try {
+        setError(null);
+        setScanning(true);
+        
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+          },
+          (decodedText) => {
+            onResult(decodedText);
+            html5QrCode.stop();
+            setScanning(false);
+          },
+          (errorMessage) => {
+            // Ignore frequent error messages
+            if (!errorMessage.includes("No QR code found")) {
+              console.warn(errorMessage);
+            }
+          }
+        );
+      } catch (err) {
+        console.error("Error starting scanner:", err);
+        setError(getErrorMessage(err));
+        setScanning(false);
       }
     };
 
-    if (!scannerInitialized) {
-      cleanupScanner();
+    // Start scanning when component mounts
+    startScanner();
 
-      const config = {
-        fps: 10,
-        qrbox: {
-          width: 250,
-          height: 250,
-        },
-        aspectRatio: 1.0,
-        showTorchButtonIfSupported: true,
-        showZoomSliderIfSupported: true,
-        defaultZoomValueIfSupported: 2,
-      };
+    // Cleanup function
+    return () => {
+      if (html5QrCode.isScanning) {
+        html5QrCode.stop().catch(console.error);
+      }
+    };
+  }, [onResult]);
 
-      const scanner = new Html5QrcodeScanner(
-        'qr-reader',
-        config,
-        /* verbose= */ false
-      );
-
-      const successCallback = (decodedText, decodedResult) => {
-        console.log(`Code matched = ${decodedText}`, decodedResult);
-        onResult(decodedText);
-        setError(null);
-        
-        // Optionally stop scanning after successful scan
-        scanner.clear();
-        setScannerInitialized(false);
-      };
-
-      const errorCallback = (errorMessage) => {
-        console.warn(`QR Code scanning failed = ${errorMessage}`);
-        if (errorMessage.includes('NotFoundError')) {
-          setError('Camera not found. Please connect a camera and try again.');
-        } else if (errorMessage.includes('NotAllowedError')) {
-          setError('Camera permission denied. Please allow camera access to scan QR codes.');
-        } else if (errorMessage.includes('NotReadableError')) {
-          setError('Cannot access camera. It may be in use by another application.');
-        } else {
-          setError('Failed to scan QR code. Please try again.');
-        }
-      };
-
-      scanner.render(successCallback, errorCallback)
-        .then(() => {
-          console.log('Scanner initialized successfully');
-          setScannerInitialized(true);
-        })
-        .catch((err) => {
-          console.error('Failed to initialize scanner:', err);
-          setError('Failed to initialize QR scanner. Please refresh the page and try again.');
-        });
-
-      // Cleanup function
-      return () => {
-        console.log('Cleaning up scanner...');
-        if (scanner) {
-          scanner.clear()
-            .then(() => console.log('Scanner cleared successfully'))
-            .catch(console.error);
-        }
-        setScannerInitialized(false);
-      };
+  const getErrorMessage = (error) => {
+    if (error.message?.includes("NotFoundError")) {
+      return "Camera not found. Please connect a camera and try again.";
+    } else if (error.message?.includes("NotAllowedError")) {
+      return "Camera permission denied. Please allow camera access to scan QR codes.";
+    } else if (error.message?.includes("NotReadableError")) {
+      return "Cannot access camera. It may be in use by another application.";
     }
-  }, [scannerInitialized, onResult]);
+    return "Failed to start QR scanner. Please refresh and try again.";
+  };
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
@@ -97,19 +76,23 @@ const QRScanner = ({ onResult }) => {
       )}
 
       <div className="bg-card rounded-lg border border-border p-6">
-        <div id="qr-reader" className="w-full max-w-md mx-auto" />
+        <div 
+          id="qr-reader" 
+          className="w-full max-w-md mx-auto"
+          style={{ position: 'relative', minHeight: '300px' }}
+        >
+          {scanning && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="animate-pulse text-muted-foreground">
+                Initializing camera...
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="text-sm text-muted-foreground text-center space-y-2">
+      <div className="text-sm text-muted-foreground text-center">
         <p>Make sure you have good lighting and hold the QR code steady</p>
-        {scannerInitialized && (
-          <button
-            onClick={() => setScannerInitialized(false)}
-            className="text-primary hover:text-primary/80"
-          >
-            Reset Scanner
-          </button>
-        )}
       </div>
     </div>
   );

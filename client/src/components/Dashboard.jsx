@@ -11,7 +11,34 @@ const Dashboard = () => {
 
   const handleScanResult = (result) => {
     setScanResult(result);
-    console.log('Scanned QR Code:', result);
+    
+    // Create a modal to show the result
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center';
+    modal.innerHTML = `
+      <div class="bg-card border border-border rounded-lg p-6 w-full max-w-md m-4">
+        <h3 class="text-lg font-semibold mb-4">QR Code Scanned!</h3>
+        <div class="space-y-4">
+          <p class="text-sm text-muted-foreground break-all">${result}</p>
+          ${result.startsWith('http') ? `
+            <a href="${result}" 
+               target="_blank" 
+               rel="noopener noreferrer"
+               class="block w-full px-4 py-2 bg-secondary text-center rounded-lg hover:bg-secondary/80 transition-colors"
+            >
+              Open Link
+            </a>
+          ` : ''}
+          <button 
+            onclick="this.parentElement.parentElement.parentElement.remove()"
+            class="w-full px-4 py-2 bg-secondary/50 rounded-lg hover:bg-secondary/30 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
   };
 
   const tabs = [
