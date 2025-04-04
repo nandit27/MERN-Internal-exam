@@ -15,5 +15,7 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  // Add CORS headers to every request
+  config.headers['Access-Control-Allow-Origin'] = 'https://client-theta-gules.vercel.app';
   return config;
 }); 

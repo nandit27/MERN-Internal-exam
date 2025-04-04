@@ -13,11 +13,28 @@ const app = express();
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://your-frontend-domain.vercel.app']
-    : ['http://localhost:5173'],
-  credentials: true
+  origin: [
+    'https://client-theta-gules.vercel.app',
+    'http://localhost:5173' // Keep local development origin
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Add CORS headers middleware for preflight requests
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'https://client-theta-gules.vercel.app');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
 
 // Add these middleware before routes
 app.use(express.json());
